@@ -1,0 +1,6 @@
+{
+  "name": "WIN WHITE LAUNDRY - Dubai Laundry Management System",
+  "description": "Professional laundry billing, inventory, order tracking, financial reporting, and staff portal for WIN WHITE LAUNDRY, Dubai UAE.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-primary: #006D77;
+    --color-primary-hover: #00565E;
+    --color-accent: #70D0F5;
+    --color-accent-soft: #E6F7FD;
+    --color-bg: #F4FAFB;
+    --color-card: #FFFFFF;
+    --color-text: #202729;
+    --color-text-muted: #5A696D;
+    --color-border: #DDE8EA;
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-top: env(safe-area-inset-top, 0px);
+  }
+
+  body {
+    background-color: #F4FAFB;
+    color: #202729;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Prevent overscroll bounce while maintaining smooth touch scroll */
+  html, body {
+    height: 100%;
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Touch-friendly minimum target */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Status Badge utilities with Teal/Sky Blue theme */
+.badge-received {
+  background-color: #EDF3F4;
+  color: #5A696D;
+  border: 1px solid #DDE8EA;
+}
+
+.badge-in-progress {
+  background-color: #E6F7FD;
+  color: #006D77;
+  border: 1px solid #70D0F5;
+}
+
+.badge-ready {
+  background-color: #E8F7F3;
+  color: #006D77;
+  border: 1px solid #82D1C1;
+}
+
+.badge-delivered {
+  background-color: #E4EDE6;
+  color: #28593C;
+  border: 1px solid #B8D6C4;
+}
+
+.badge-pending {
+  background-color: #FEF7EA;
+  color: #99600D;
+  border: 1px solid #F5DEB4;
+}
+
+.badge-overdue {
+  background-color: #FDF0F0;
+  color: #A32727;
+  border: 1px solid #F8C3C3;
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  header, aside, nav, .print\:hidden, .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  .print\:block {
+    display: block !important;
+  }
+
+  .page-copy {
+    page-break-after: always;
+    break-after: page;
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm 8mm;
+  }
+}
