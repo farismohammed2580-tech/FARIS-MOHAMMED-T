@@ -3,6 +3,7 @@
  * for WIN WHITE LAUNDRY business branding.
  */
 
+export const OFFICIAL_WIN_WHITE_LOGO_URL = '/assets/aistudio/Win_White_Laundry_Emblem__1__46a32c03.png';
 export const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 export const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 export const ALLOWED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp'];

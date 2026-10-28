@@ -115,14 +115,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     try {
       const updated = storage.saveSettings({
         ...formData,
-        logoUrl: '',
+        logoUrl: '/assets/aistudio/Win_White_Laundry_Emblem__1__46a32c03.png',
       });
       setFormData(updated);
       setPendingLogoUrl(null);
       setLogoError(null);
       setShowRemoveLogoConfirm(false);
       onSettingsUpdated(updated);
-      showLogoSuccessMsg('Business logo removed. Default WIN WHITE LAUNDRY brand mark restored.');
+      showLogoSuccessMsg('Official WIN WHITE LAUNDRY emblem restored.');
     } catch (err: any) {
       setLogoError(err?.message || 'Failed to remove business logo.');
       setShowRemoveLogoConfirm(false);

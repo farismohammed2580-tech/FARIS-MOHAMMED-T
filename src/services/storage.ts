@@ -677,7 +677,7 @@ const INITIAL_SETTINGS: BusinessSettings = {
   defaultPrintCopy: 'both',
   adminPin: '1234',
   staffPin: '4321',
-  logoUrl: '',
+  logoUrl: '/assets/aistudio/Win_White_Laundry_Emblem__1__46a32c03.png',
   garmentResponsibilityNotice:
     'IMPORTANT NOTICE: Win White Laundry accepts responsibility for garments for a maximum period of 30 days from the agreed collection date, subject to applicable law.',
 };
@@ -1887,12 +1887,14 @@ class StorageService {
         const scrubbedPhone = parsed.phone === '02 440 3012' ? '' : (parsed.phone || '');
         const mobile1 = parsed.mobile || INITIAL_SETTINGS.mobile;
         const mobile2 = parsed.mobile2 || (parsed.phone === '055 720 2819' ? parsed.phone : INITIAL_SETTINGS.mobile2);
+        const resolvedLogo = (parsed.logoUrl && parsed.logoUrl.trim() !== '') ? parsed.logoUrl : INITIAL_SETTINGS.logoUrl;
         return {
           ...INITIAL_SETTINGS,
           ...parsed,
           phone: scrubbedPhone,
           mobile: mobile1,
           mobile2: mobile2,
+          logoUrl: resolvedLogo,
           garmentResponsibilityNotice:
             parsed.garmentResponsibilityNotice || INITIAL_SETTINGS.garmentResponsibilityNotice,
         };

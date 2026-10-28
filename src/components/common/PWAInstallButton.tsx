@@ -13,6 +13,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
 }) => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [showFallbackGuide, setShowFallbackGuide] = useState(false);
 
   // If already running as an installed PWA, hide the button
   if (isInstalled) {
@@ -112,8 +113,6 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
       </>
     );
   }
-
-  const [showFallbackGuide, setShowFallbackGuide] = useState(false);
 
   // Generic fallback install prompt on supported browsers
   return (

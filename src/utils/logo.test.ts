@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateLogoFile, MAX_LOGO_SIZE_BYTES } from './logo';
+import { validateLogoFile, MAX_LOGO_SIZE_BYTES, OFFICIAL_WIN_WHITE_LOGO_URL } from './logo';
 
 test('validateLogoFile accepts valid PNG, JPG, JPEG, and WebP files within 5MB', () => {
   const pngFile = { name: 'shop_logo.png', size: 1024 * 500, type: 'image/png' };
@@ -43,4 +43,8 @@ test('validateLogoFile rejects empty files', () => {
   const emptyFile = { name: 'empty.png', size: 0, type: 'image/png' };
   assert.equal(validateLogoFile(emptyFile).valid, false);
   assert.match(validateLogoFile(emptyFile).error || '', /empty/i);
+});
+
+test('OFFICIAL_WIN_WHITE_LOGO_URL points to uploaded emblem asset', () => {
+  assert.equal(OFFICIAL_WIN_WHITE_LOGO_URL, '/assets/aistudio/Win_White_Laundry_Emblem__1__46a32c03.png');
 });
