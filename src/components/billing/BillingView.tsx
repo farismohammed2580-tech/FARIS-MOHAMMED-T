@@ -8,6 +8,9 @@ import {
   SERVICE_TYPES,
   BusinessSettings,
   UserAccount,
+  PackingPreference,
+  ItemPackingPreference,
+  PACKING_PREFERENCES,
 } from '../../types';
 import { storage } from '../../services/storage';
 import {
@@ -32,6 +35,7 @@ import {
   RotateCcw,
   Minus,
   MapPin,
+  Package,
 } from 'lucide-react';
 import { PrintInvoiceModal } from '../invoice/PrintInvoiceModal';
 
@@ -39,12 +43,16 @@ interface BillingViewProps {
   currentUser: UserAccount;
   settings: BusinessSettings;
   onInvoiceCreated?: (invoice: Invoice) => void;
+  initialInvoice?: Invoice | null;
+  onCancelEdit?: () => void;
 }
 
 export const BillingView: React.FC<BillingViewProps> = ({
   currentUser,
   settings,
   onInvoiceCreated,
+  initialInvoice = null,
+  onCancelEdit,
 }) => {
   // Master data
   const [dressTypes, setDressTypes] = useState<DressType[]>([]);
@@ -59,6 +67,11 @@ export const BillingView: React.FC<BillingViewProps> = ({
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
+  // Packing Preference state: 'Fold' | 'Hanging' | 'Mixed'
+  const [packingPreference, setPackingPreference] = useState<PackingPreference>(
+    () => initialInvoice?.packingPreference || 'Fold'
+  );
+
   // Line items state
   const [items, setItems] = useState<
     Array<{
@@ -70,6 +83,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
       unitPrice: number;
       subtotal: number;
       notes?: string;
+      packingPreference?: ItemPackingPreference;
     }>
   >([]);
 
@@ -101,9 +115,45 @@ export const BillingView: React.FC<BillingViewProps> = ({
     return storage.subscribe(loadData);
   }, []);
 
-  // Initialize with 1 default empty item row once dress types are ready
+  // Sync initialInvoice if reopening/editing an invoice
   useEffect(() => {
-    if (items.length === 0 && dressTypes.length > 0) {
+    if (initialInvoice) {
+      setCustomerName(initialInvoice.customerName);
+      setCustomerPhone(initialInvoice.customerPhone);
+      const cust = storage.findCustomerByPhone(initialInvoice.customerPhone);
+      if (cust) {
+        setSelectedCustomerId(cust.id);
+        setSelectedCustomer(cust);
+        setCustomerAddress(cust.address || '');
+      }
+      const initialPref = initialInvoice.packingPreference || 'Fold';
+      setPackingPreference(initialPref);
+      setItems(
+        initialInvoice.items.map((it) => ({
+          id: it.id,
+          dressTypeId: it.dressTypeId,
+          dressTypeName: it.dressTypeName,
+          service: it.service,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          subtotal: it.subtotal,
+          notes: it.specialInstructions,
+          packingPreference:
+            it.packingPreference || (initialPref === 'Hanging' ? 'Hanging' : 'Fold'),
+        }))
+      );
+      setInvoiceDate(initialInvoice.invoiceDate);
+      setExpectedDeliveryDate(initialInvoice.expectedDeliveryDate);
+      setDiscount(initialInvoice.discount);
+      setAmountPaid(initialInvoice.amountPaid);
+      setPaymentMethod(initialInvoice.paymentMethod);
+      setSpecialInstructions(initialInvoice.notes || '');
+    }
+  }, [initialInvoice]);
+
+  // Initialize with 1 default empty item row once dress types are ready if not editing
+  useEffect(() => {
+    if (!initialInvoice && items.length === 0 && dressTypes.length > 0) {
       const defaultDress = dressTypes[0];
       const defaultService: ServiceType = 'Normal Wash';
       const defaultPrice = defaultDress.prices[defaultService] || defaultDress.prices['Washing + Ironing'] || 0;
@@ -116,10 +166,11 @@ export const BillingView: React.FC<BillingViewProps> = ({
           quantity: 1,
           unitPrice: defaultPrice,
           subtotal: defaultPrice,
+          packingPreference: 'Fold',
         },
       ]);
     }
-  }, [dressTypes, items.length]);
+  }, [dressTypes, items.length, initialInvoice]);
 
   // Customer Autocomplete Filter with Code, Phone and Name Matching
   const filteredCustomers = useMemo(() => {
@@ -145,12 +196,34 @@ export const BillingView: React.FC<BillingViewProps> = ({
     setShowCustomerDropdown(false);
   };
 
+  // Packing preference handlers
+  const handlePackingPreferenceChange = (newPref: PackingPreference) => {
+    setPackingPreference(newPref);
+    if (newPref === 'Fold' || newPref === 'Hanging') {
+      setItems((prev) =>
+        prev.map((it) => ({
+          ...it,
+          packingPreference: newPref,
+        }))
+      );
+    }
+  };
+
+  const handleItemPackingChange = (index: number, pref: ItemPackingPreference) => {
+    setItems((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], packingPreference: pref };
+      return copy;
+    });
+  };
+
   // Add a line item
   const handleAddItem = () => {
     if (dressTypes.length === 0) return;
     const defaultDress = dressTypes[0];
     const defaultService: ServiceType = 'Normal Wash';
     const defaultPrice = defaultDress.prices[defaultService] || defaultDress.prices['Washing + Ironing'] || 0;
+    const itemPref: ItemPackingPreference = packingPreference === 'Hanging' ? 'Hanging' : 'Fold';
 
     setItems((prev) => [
       ...prev,
@@ -162,6 +235,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
         quantity: 1,
         unitPrice: defaultPrice,
         subtotal: defaultPrice,
+        packingPreference: itemPref,
       },
     ]);
   };
@@ -241,6 +315,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
     setDiscount(0);
     setAmountPaid(0);
     setSpecialInstructions('');
+    setPackingPreference('Fold');
     setInvoiceDate(getDubaiCurrentDateTime().isoDate);
     const d = new Date();
     d.setDate(d.getDate() + 2);
@@ -259,6 +334,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
           quantity: 1,
           unitPrice: defaultPrice,
           subtotal: defaultPrice,
+          packingPreference: 'Fold',
         },
       ]);
     }
@@ -309,8 +385,6 @@ export const BillingView: React.FC<BillingViewProps> = ({
         );
       }
 
-      const invoiceNumber = storage.getNextInvoiceNumber();
-
       const invoiceItems: InvoiceItem[] = items.map((it) => ({
         id: it.id,
         dressTypeId: it.dressTypeId,
@@ -320,69 +394,110 @@ export const BillingView: React.FC<BillingViewProps> = ({
         unitPrice: it.unitPrice,
         subtotal: it.subtotal,
         specialInstructions: it.notes,
+        packingPreference:
+          packingPreference === 'Mixed'
+            ? (it.packingPreference || 'Fold')
+            : (packingPreference === 'Hanging' ? 'Hanging' : 'Fold'),
       }));
 
-      const initialPayment =
-        totals.amountPaid > 0
-          ? [
-              {
-                id: `pay-${Date.now()}`,
-                invoiceId: `inv-${Date.now()}`,
-                amount: totals.amountPaid,
-                paymentMethod,
-                date: new Date().toISOString(),
-                recordedBy: `${currentUser.name} (${currentUser.role})`,
-                notes: 'Paid at counter',
-              },
-            ]
-          : [];
+      let invoiceToSave: Invoice;
 
-      const newInvoice: Invoice = {
-        id: `inv-${Date.now()}`,
-        invoiceNumber,
-        customerId: customer.id,
-        customerName: customer.name,
-        customerPhone: customer.phone,
-        items: invoiceItems,
-        subtotal: totals.subtotal,
-        discount: totals.discount,
-        total: totals.total,
-        amountPaid: totals.amountPaid,
-        remainingBalance: totals.remainingBalance,
-        paymentMethod,
-        paymentStatus: totals.paymentStatus,
-        invoiceDate,
-        expectedDeliveryDate,
-        status: 'Received',
-        statusHistory: [
-          {
-            status: 'Received',
-            timestamp: new Date().toISOString(),
-            updatedBy: `${currentUser.name} (${currentUser.role})`,
-            note: 'Order registered at counter',
-          },
-        ],
-        paymentHistory: initialPayment,
-        notes: specialInstructions,
-        createdAt: new Date().toISOString(),
-      };
+      if (initialInvoice) {
+        // Updating existing/reopened invoice
+        invoiceToSave = {
+          ...initialInvoice,
+          customerId: customer.id,
+          customerName: customer.name,
+          customerPhone: customer.phone,
+          items: invoiceItems,
+          subtotal: totals.subtotal,
+          discount: totals.discount,
+          total: totals.total,
+          amountPaid: totals.amountPaid,
+          remainingBalance: totals.remainingBalance,
+          paymentMethod,
+          paymentStatus: totals.paymentStatus,
+          invoiceDate,
+          expectedDeliveryDate,
+          packingPreference,
+          notes: specialInstructions,
+          statusHistory: [
+            ...(initialInvoice.statusHistory || []),
+            {
+              status: initialInvoice.status,
+              timestamp: new Date().toISOString(),
+              updatedBy: `${currentUser.name} (${currentUser.role})`,
+              note: `Invoice packing preference saved as: ${packingPreference.toUpperCase()}`,
+            },
+          ],
+        };
+      } else {
+        // Creating new invoice
+        const invoiceNumber = storage.getNextInvoiceNumber();
+        const newInvoiceId = `inv-${Date.now()}`;
 
-      storage.saveInvoice(newInvoice);
+        const initialPayment =
+          totals.amountPaid > 0
+            ? [
+                {
+                  id: `pay-${Date.now()}`,
+                  invoiceId: newInvoiceId,
+                  amount: totals.amountPaid,
+                  paymentMethod,
+                  date: new Date().toISOString(),
+                  recordedBy: `${currentUser.name} (${currentUser.role})`,
+                  notes: 'Paid at counter',
+                },
+              ]
+            : [];
 
-      setSaveSuccessInvoice(newInvoice);
+        invoiceToSave = {
+          id: newInvoiceId,
+          invoiceNumber,
+          customerId: customer.id,
+          customerName: customer.name,
+          customerPhone: customer.phone,
+          items: invoiceItems,
+          subtotal: totals.subtotal,
+          discount: totals.discount,
+          total: totals.total,
+          amountPaid: totals.amountPaid,
+          remainingBalance: totals.remainingBalance,
+          paymentMethod,
+          paymentStatus: totals.paymentStatus,
+          invoiceDate,
+          expectedDeliveryDate,
+          status: 'Received',
+          packingPreference,
+          statusHistory: [
+            {
+              status: 'Received',
+              timestamp: new Date().toISOString(),
+              updatedBy: `${currentUser.name} (${currentUser.role})`,
+              note: `Order registered with packing preference: ${packingPreference.toUpperCase()}`,
+            },
+          ],
+          paymentHistory: initialPayment,
+          notes: specialInstructions,
+          createdAt: new Date().toISOString(),
+        };
+      }
+
+      storage.saveInvoice(invoiceToSave);
+      setSaveSuccessInvoice(invoiceToSave);
       if (onInvoiceCreated) {
-        onInvoiceCreated(newInvoice);
+        onInvoiceCreated(invoiceToSave);
       }
 
       if (andPrint) {
-        setPrintModalInvoice(newInvoice);
+        setPrintModalInvoice(invoiceToSave);
       }
 
       setTimeout(() => {
         setIsSaving(false);
       }, 500);
 
-      return newInvoice;
+      return invoiceToSave;
     } catch (err: any) {
       console.error('Error saving invoice', err);
       setErrorMessage(err.message || 'Failed to save invoice.');
@@ -397,12 +512,27 @@ export const BillingView: React.FC<BillingViewProps> = ({
       <div className="bg-white rounded-2xl p-3.5 border border-[#D4E7EC] shadow-xs space-y-2.5">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-base font-bold text-[#202729] tracking-tight">New Laundry Invoice</h1>
-            <p className="text-[11px] text-[#5A6B70]">Counter intake & billing POS</p>
+            <h1 className="text-base font-bold text-[#202729] tracking-tight">
+              {initialInvoice ? `Edit Invoice #${initialInvoice.invoiceNumber}` : 'New Laundry Invoice'}
+            </h1>
+            <p className="text-[11px] text-[#5A6B70]">
+              {initialInvoice ? 'Modify packing preferences & garment items' : 'Counter intake & billing POS'}
+            </p>
           </div>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E6F5F8] text-[#006D77] border border-[#006D77]/20">
-            Intake
-          </span>
+          <div className="flex items-center gap-1.5">
+            {initialInvoice && onCancelEdit && (
+              <button
+                type="button"
+                onClick={onCancelEdit}
+                className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#F4FAFB] hover:bg-[#E6F5F8] text-[#5A6B70] border border-[#D4E7EC] cursor-pointer"
+              >
+                Cancel
+              </button>
+            )}
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#E6F5F8] text-[#006D77] border border-[#006D77]/20">
+              {initialInvoice ? 'Edit' : 'Intake'}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
@@ -640,6 +770,56 @@ export const BillingView: React.FC<BillingViewProps> = ({
         </div>
       </div>
 
+      {/* Section: Packing Preference */}
+      <div className="bg-white rounded-2xl p-3.5 border border-[#D4E7EC] shadow-xs space-y-2.5">
+        <div className="flex items-center justify-between border-b border-[#D4E7EC] pb-2">
+          <div className="flex items-center gap-1.5">
+            <Package className="w-4 h-4 text-[#006D77]" />
+            <h2 className="text-xs font-bold text-[#202729] uppercase tracking-wider">
+              Packing Preference <span className="text-[#006D77]">*</span>
+            </h2>
+          </div>
+          <span className="text-[10px] text-[#5A6B70]">
+            Selected: <strong className="text-[#006D77] font-mono">{packingPreference.toUpperCase()}</strong>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          {(['Fold', 'Hanging', 'Mixed'] as PackingPreference[]).map((pref) => {
+            const isSelected = packingPreference === pref;
+            return (
+              <button
+                key={pref}
+                type="button"
+                onClick={() => handlePackingPreferenceChange(pref)}
+                className={`py-2 px-1.5 rounded-xl text-xs font-bold transition flex flex-col items-center justify-center gap-0.5 cursor-pointer border ${
+                  isSelected
+                    ? 'bg-[#006D77] text-white border-[#006D77] shadow-xs'
+                    : 'bg-[#F4FAFB] text-[#202729] border-[#D4E7EC] hover:bg-[#E6F5F8]'
+                }`}
+              >
+                <span className="text-xs font-black uppercase tracking-tight">{pref}</span>
+                <span className={`text-[9px] ${isSelected ? 'text-white/85' : 'text-[#5A6B70]'}`}>
+                  {pref === 'Fold' ? 'All Folded' : pref === 'Hanging' ? 'On Hangers' : 'Custom Item'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {packingPreference === 'Mixed' ? (
+          <div className="p-2.5 bg-[#FEF3C7]/70 border border-[#FDE68A] rounded-xl text-[11px] text-[#92400E] flex items-center gap-1.5">
+            <span className="font-bold shrink-0">MIXED ORDER:</span>
+            <span>Select Fold or Hanging preference for each garment item in the section below.</span>
+          </div>
+        ) : (
+          <div className="p-2.5 bg-[#E6F5F8] border border-[#BDE7EF] rounded-xl text-[11px] text-[#006D77] flex items-center justify-between">
+            <span>Order Packing: <strong>All {packingPreference}</strong></span>
+            <span className="text-[10px] text-[#5A6B70]">Applies to entire order</span>
+          </div>
+        )}
+      </div>
+
       {/* Section 2: Garment Items (Strictly Mobile Cards) */}
       <div className="bg-white rounded-2xl p-3.5 border border-[#D4E7EC] shadow-xs space-y-3">
         <div className="flex justify-between items-center border-b border-[#D4E7EC] pb-2">
@@ -764,6 +944,40 @@ export const BillingView: React.FC<BillingViewProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Item-level Packing Preference in Mixed Mode */}
+              {packingPreference === 'Mixed' && (
+                <div className="pt-2 border-t border-[#D4E7EC]/70 flex items-center justify-between gap-2 bg-[#F4FAFB] p-2 rounded-xl">
+                  <span className="text-[10px] font-bold text-[#202729] flex items-center gap-1">
+                    <Package className="w-3 h-3 text-[#006D77]" />
+                    <span>Garment Packing:</span>
+                  </span>
+                  <div className="inline-flex rounded-lg bg-white border border-[#D4E7EC] p-0.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => handleItemPackingChange(index, 'Fold')}
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition cursor-pointer ${
+                        (item.packingPreference || 'Fold') === 'Fold'
+                          ? 'bg-[#006D77] text-white shadow-2xs'
+                          : 'text-[#5A6B70] hover:text-[#202729]'
+                      }`}
+                    >
+                      Fold
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleItemPackingChange(index, 'Hanging')}
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition cursor-pointer ${
+                        item.packingPreference === 'Hanging'
+                          ? 'bg-[#006D77] text-white shadow-2xs'
+                          : 'text-[#5A6B70] hover:text-[#202729]'
+                      }`}
+                    >
+                      Hanging
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -34,6 +34,7 @@ export const PendingPaymentsView: React.FC<PendingPaymentsViewProps> = ({
   const [payAmount, setPayAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'Other'>('Cash');
   const [payNote, setPayNote] = useState('');
+  const [payError, setPayError] = useState<string | null>(null);
 
   // Payment History Modal
   const [historyInvoice, setHistoryInvoice] = useState<Invoice | null>(null);
@@ -85,6 +86,7 @@ export const PendingPaymentsView: React.FC<PendingPaymentsViewProps> = ({
     setPayAmount(inv.remainingBalance);
     setPaymentMethod('Cash');
     setPayNote('');
+    setPayError(null);
   };
 
   const handleConfirmPayment = (e: React.FormEvent) => {
@@ -92,14 +94,16 @@ export const PendingPaymentsView: React.FC<PendingPaymentsViewProps> = ({
     if (!payInvoice) return;
 
     if (payAmount <= 0) {
-      alert('Payment amount must be greater than zero.');
+      setPayError('Payment amount must be greater than zero.');
       return;
     }
 
     if (payAmount > payInvoice.remainingBalance) {
-      alert('Payment amount cannot exceed the remaining balance.');
+      setPayError('Payment amount cannot exceed the remaining balance.');
       return;
     }
+
+    setPayError(null);
 
     const updated = storage.recordInvoicePayment(
       payInvoice.id,
@@ -307,6 +311,12 @@ export const PendingPaymentsView: React.FC<PendingPaymentsViewProps> = ({
                   </span>
                 </div>
               </div>
+
+              {payError && (
+                <div className="p-2.5 rounded-xl bg-[#FDF0F0] border border-[#F8C3C3] text-[#A32727] text-xs font-semibold">
+                  {payError}
+                </div>
+              )}
 
               <div>
                 <label className="block font-bold text-[#202729] mb-1">

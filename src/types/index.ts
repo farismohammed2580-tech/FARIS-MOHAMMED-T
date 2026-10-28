@@ -26,6 +26,10 @@ export interface DressType {
   rateType?: 'fixed' | 'size' | 'meter' | 'quote';
 }
 
+export type PackingPreference = 'Fold' | 'Hanging' | 'Mixed';
+export type ItemPackingPreference = 'Fold' | 'Hanging';
+export const PACKING_PREFERENCES: PackingPreference[] = ['Fold', 'Hanging', 'Mixed'];
+
 export interface InvoiceItem {
   id: string;
   dressTypeId: string;
@@ -35,6 +39,7 @@ export interface InvoiceItem {
   unitPrice: number;
   subtotal: number;
   specialInstructions?: string;
+  packingPreference?: ItemPackingPreference;
 }
 
 export type OrderStatus = 'Received' | 'In Progress' | 'Ready for Pickup' | 'Delivered';
@@ -77,6 +82,7 @@ export interface Invoice {
   paymentHistory: PaymentRecord[];
   notes?: string;
   createdAt: string;
+  packingPreference?: PackingPreference;
 }
 
 export interface Customer {
@@ -93,6 +99,10 @@ export interface Customer {
   isMonthlyCustomer?: boolean;
   customerCode?: string;
   monthlyAccountId?: string;
+  proofDocumentUrl?: string;
+  proofDocumentName?: string;
+  proofDocumentType?: string;
+  proofDocumentUploadedAt?: string;
 }
 
 export type ExpenseCategory =
@@ -155,8 +165,9 @@ export interface BusinessSettings {
   tagline: string;
   branch: string;
   address: string;
-  phone: string; // Landline Telephone
-  mobile: string; // Mobile / WhatsApp
+  phone?: string; // Landline Telephone (deprecated/optional)
+  mobile: string; // Business Mobile 1: 056 657 5169
+  mobile2?: string; // Business Mobile 2: 055 720 2819
   poBox: string; // P.O. Box
   email: string;
   trnNumber: string; // UAE Tax Registration Number
@@ -175,6 +186,7 @@ export interface BusinessSettings {
   adminPin?: string;
   staffPin?: string;
   logoUrl?: string;
+  garmentResponsibilityNotice?: string;
 }
 
 export type MonthlyAccountStatus = 'Active' | 'Paused' | 'Inactive';
@@ -192,6 +204,10 @@ export interface MonthlyCustomerAccount {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  proofDocumentUrl?: string;
+  proofDocumentName?: string;
+  proofDocumentType?: string;
+  proofDocumentUploadedAt?: string;
 }
 
 export interface StatementInvoiceSummary {

@@ -43,7 +43,13 @@ import {
   Edit2,
   Check,
   ChevronRight,
+  FileCheck,
+  Eye,
+  ShieldCheck,
+  X,
 } from 'lucide-react';
+import { CustomerProofUpload } from './CustomerProofUpload';
+import { saveCustomerProof, deleteCustomerProof } from '../../services/customerProofStorage';
 
 interface MonthlyCustomerDetailViewProps {
   customerId: string;
@@ -91,6 +97,10 @@ export const MonthlyCustomerDetailView: React.FC<MonthlyCustomerDetailViewProps>
   const [editScheduledTime, setEditScheduledTime] = useState<string>('09:00');
   const [editAutoSend, setEditAutoSend] = useState<boolean>(true);
   const [editRequireApproval, setEditRequireApproval] = useState<boolean>(false);
+  const [editProofDataUrl, setEditProofDataUrl] = useState<string | null>(null);
+  const [editProofFileName, setEditProofFileName] = useState<string | null>(null);
+  const [editProofFileType, setEditProofFileType] = useState<string | null>(null);
+  const [isBannerProofPreviewOpen, setIsBannerProofPreviewOpen] = useState<boolean>(false);
 
   // WhatsApp API status state
   const [apiStatus, setApiStatus] = useState<{
@@ -120,6 +130,13 @@ export const MonthlyCustomerDetailView: React.FC<MonthlyCustomerDetailViewProps>
       setEditScheduledTime(acc.scheduledSendTime);
       setEditAutoSend(acc.autoSendWhatsApp);
       setEditRequireApproval(acc.requireAdminApproval);
+      setEditProofDataUrl(acc.proofDocumentUrl || cust?.proofDocumentUrl || null);
+      setEditProofFileName(acc.proofDocumentName || cust?.proofDocumentName || null);
+      setEditProofFileType(acc.proofDocumentType || cust?.proofDocumentType || null);
+    } else if (cust) {
+      setEditProofDataUrl(cust.proofDocumentUrl || null);
+      setEditProofFileName(cust.proofDocumentName || null);
+      setEditProofFileType(cust.proofDocumentType || null);
     }
 
     setInvoices(storage.getInvoices().filter((inv) => inv.customerId === customerId));
@@ -222,9 +239,18 @@ export const MonthlyCustomerDetailView: React.FC<MonthlyCustomerDetailViewProps>
         autoSendWhatsApp: editAutoSend,
         requireAdminApproval: editRequireApproval,
         nextBillingDate: updatedCycle.nextBillingDate,
+        proofDocumentUrl: editProofDataUrl || undefined,
+        proofDocumentName: editProofFileName || undefined,
+        proofDocumentType: editProofFileType || undefined,
+        proofDocumentUploadedAt: editProofDataUrl ? (account.proofDocumentUploadedAt || new Date().toISOString()) : undefined,
       };
 
       storage.saveMonthlyAccount(updatedAccount);
+      if (editProofDataUrl) {
+        saveCustomerProof(customerId, editProofDataUrl, editProofFileName || 'proof.jpg', editProofFileType || 'image/jpeg');
+      } else {
+        deleteCustomerProof(customerId);
+      }
       setNotificationMsg({
         text: 'Monthly account settings updated successfully.',
         type: 'success',
@@ -419,11 +445,69 @@ export const MonthlyCustomerDetailView: React.FC<MonthlyCustomerDetailViewProps>
               type="button"
               onClick={() => setIsEditCycleModalOpen(true)}
               className="p-1.5 rounded-xl bg-[#F4FAFB] hover:bg-[#E5EFF1] text-[#5A696D] hover:text-[#006D77] border border-[#DDE8EA] transition cursor-pointer"
-              title="Edit Billing Cycle Settings"
+              title="Edit Billing Cycle & Proof Document"
             >
               <Edit2 className="w-3.5 h-3.5" />
             </button>
           </div>
+        </div>
+
+        {/* Customer Proof Document Row in Banner */}
+        <div className="pt-2 border-t border-[#D4E7EC] flex flex-wrap items-center justify-between gap-2 text-xs">
+          {(account?.proofDocumentUrl || customer?.proofDocumentUrl) ? (
+            <div className="flex items-center gap-2.5 bg-[#F4FAFB] px-3 py-1.5 rounded-xl border border-[#DDE8EA] w-full sm:w-auto">
+              <div
+                onClick={() => setIsBannerProofPreviewOpen(true)}
+                className="w-7 h-7 rounded-lg overflow-hidden bg-white border border-[#D4E7EC] shrink-0 cursor-pointer shadow-2xs"
+                title="Click to view full proof document"
+              >
+                <img
+                  src={account?.proofDocumentUrl || customer?.proofDocumentUrl}
+                  alt="Proof Document"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="min-w-0">
+                <span className="font-bold text-[11px] text-[#202729] flex items-center gap-1">
+                  <FileCheck className="w-3 h-3 text-[#006D77]" />
+                  <span>{account?.proofDocumentName || customer?.proofDocumentName || 'Verification Proof'}</span>
+                </span>
+                <span className="text-[10px] text-[#5A6B70] block">
+                  Private Document on File
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 ml-auto sm:ml-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBannerProofPreviewOpen(true)}
+                  className="px-2 py-0.5 bg-white hover:bg-[#E6F5F8] text-[#006D77] text-[10px] font-bold rounded-lg border border-[#BDE7EF] transition cursor-pointer"
+                >
+                  View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditCycleModalOpen(true)}
+                  className="px-2 py-0.5 bg-white hover:bg-[#E6F5F8] text-[#5A696D] text-[10px] font-bold rounded-lg border border-[#D4E7EC] transition cursor-pointer"
+                >
+                  Manage
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between w-full bg-[#F4FAFB] px-3 py-1.5 rounded-xl border border-[#DDE8EA]">
+              <span className="text-[11px] text-[#5A696D] flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#5A696D]" />
+                <span>No customer proof or registration documents attached yet.</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsEditCycleModalOpen(true)}
+                className="text-[11px] font-bold text-[#006D77] hover:underline cursor-pointer"
+              >
+                + Attach Proof
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Cycle Tabs & Selector */}
@@ -1141,6 +1225,20 @@ export const MonthlyCustomerDetailView: React.FC<MonthlyCustomerDetailViewProps>
                 </label>
               </div>
 
+              {/* Customer Proof / Documents Section in Edit Modal */}
+              <div className="pt-2 border-t border-[#D4E7EC]">
+                <CustomerProofUpload
+                  label="Customer Proof / Documents (Optional)"
+                  currentProofUrl={editProofDataUrl}
+                  currentFileName={editProofFileName}
+                  onProofChange={(url, name, type) => {
+                    setEditProofDataUrl(url);
+                    setEditProofFileName(name);
+                    setEditProofFileType(type);
+                  }}
+                />
+              </div>
+
               <div className="pt-2 flex gap-2">
                 <button
                   type="submit"
@@ -1157,6 +1255,53 @@ export const MonthlyCustomerDetailView: React.FC<MonthlyCustomerDetailViewProps>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Full Document View Modal from Banner */}
+      {isBannerProofPreviewOpen && (account?.proofDocumentUrl || customer?.proofDocumentUrl) && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl border border-[#D4E7EC] overflow-hidden">
+            <div className="flex items-center justify-between p-3.5 border-b border-[#D4E7EC] bg-[#F4FAFB]">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#006D77]" />
+                <div>
+                  <h3 className="text-xs font-bold text-[#202729]">
+                    {account?.proofDocumentName || customer?.proofDocumentName || 'Customer Proof Document'}
+                  </h3>
+                  <p className="text-[9.5px] text-[#5A696D]">Private Verification Document</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBannerProofPreviewOpen(false)}
+                className="p-1 rounded-xl hover:bg-[#E5EFF1] text-[#202729] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 overflow-auto flex items-center justify-center bg-[#202729]/5 min-h-[250px] max-h-[60vh]">
+              <img
+                src={account?.proofDocumentUrl || customer?.proofDocumentUrl || ''}
+                alt="Document Full Preview"
+                className="max-w-full max-h-[55vh] object-contain rounded-xl shadow-xs"
+              />
+            </div>
+
+            <div className="p-3 bg-white border-t border-[#D4E7EC] flex items-center justify-between gap-2">
+              <span className="text-[10px] text-[#5A696D]">
+                Restricted to authorized Admin session
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsBannerProofPreviewOpen(false)}
+                className="px-4 py-1.5 bg-[#006D77] text-white text-xs font-bold rounded-xl shadow-2xs hover:bg-[#00575F] cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
       )}

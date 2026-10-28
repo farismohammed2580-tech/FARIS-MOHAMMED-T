@@ -46,6 +46,7 @@ export default function App() {
   const [settings, setSettings] = useState<BusinessSettings>(() => storage.getSettings());
   const [currentUser, setCurrentUser] = useState<UserAccount>(() => storage.getCurrentUser());
   const [invoices, setInvoices] = useState<Invoice[]>(() => storage.getInvoices());
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
   // Sync state from storage
   useEffect(() => {
@@ -269,7 +270,11 @@ export default function App() {
             <BillingView
               currentUser={currentUser}
               settings={settings}
-              onInvoiceCreated={() => {}}
+              initialInvoice={editingInvoice}
+              onCancelEdit={() => setEditingInvoice(null)}
+              onInvoiceCreated={() => {
+                setEditingInvoice(null);
+              }}
             />
           )}
 
@@ -290,7 +295,14 @@ export default function App() {
           )}
 
           {activeTab === 'order-tracking' && (
-            <OrderTrackingView currentUser={currentUser} settings={settings} />
+            <OrderTrackingView
+              currentUser={currentUser}
+              settings={settings}
+              onEditInvoice={(inv) => {
+                setEditingInvoice(inv);
+                handleTabChange('billing');
+              }}
+            />
           )}
 
           {activeTab === 'pending-payments' && (

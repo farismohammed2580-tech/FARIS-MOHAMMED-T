@@ -60,6 +60,8 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ currentUser }) => {
   const [receiptDataUrl, setReceiptDataUrl] = useState<string | null>(null);
   const [receiptFileName, setReceiptFileName] = useState<string>('');
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; desc: string } | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   // Lightbox / Image Viewer Modal State
@@ -145,6 +147,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ currentUser }) => {
     setReceiptDataUrl(null);
     setReceiptFileName('');
     setReceiptError(null);
+    setFormError(null);
     setIsProcessingImage(false);
     setIsModalOpen(true);
   };
@@ -157,6 +160,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ currentUser }) => {
     setAmount(exp.amount);
     setPaymentMethod(exp.paymentMethod);
     setReceiptError(null);
+    setFormError(null);
     setIsProcessingImage(false);
 
     // Load receipt image if attached
@@ -177,16 +181,21 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ currentUser }) => {
   };
 
   const handleDelete = (id: string, desc: string) => {
-    if (confirm(`Are you sure you want to delete expense "${desc}"?`)) {
-      storage.deleteExpense(id);
-      deleteReceiptImage(id);
-      setReceiptCache((prev) => {
-        const copy = { ...prev };
-        delete copy[id];
-        return copy;
-      });
-      showToast('Expense entry deleted.');
-    }
+    setExpenseToDelete({ id, desc });
+  };
+
+  const confirmDeleteExpense = () => {
+    if (!expenseToDelete) return;
+    const { id } = expenseToDelete;
+    storage.deleteExpense(id);
+    deleteReceiptImage(id);
+    setReceiptCache((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+    setExpenseToDelete(null);
+    showToast('Expense entry deleted.');
   };
 
   // Image Upload Handler with File Validation
@@ -229,13 +238,14 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ currentUser }) => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (amount <= 0) {
-      alert('Please enter a valid expense amount greater than 0.');
+      setFormError('Please enter a valid expense amount greater than 0.');
       return;
     }
     if (!description.trim()) {
-      alert('Please enter a description for this expense.');
+      setFormError('Please enter a description for this expense.');
       return;
     }
+    setFormError(null);
 
     const expenseId = editingExpenseId || `exp-${Date.now()}`;
     let savedReceiptUrl: string | undefined = undefined;
@@ -581,6 +591,18 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ currentUser }) => {
             </div>
 
             <form onSubmit={handleSave} className="space-y-3.5 text-xs">
+              {formError && (
+                <div className="p-2.5 bg-[#FCEEEE] border border-[#F5C2C2] text-[#9E3636] rounded-xl text-xs flex items-center justify-between">
+                  <span>{formError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormError(null)}
+                    className="text-[#9E3636] font-bold ml-2 hover:opacity-75 cursor-pointer text-sm"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
               <div>
                 <label className="block font-bold text-[#202729] mb-1">Date</label>
                 <input
@@ -901,6 +923,34 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({ currentUser }) => {
                 className="px-4 py-1.5 bg-[#006D77] hover:bg-[#00575F] text-white rounded-xl font-bold transition"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {expenseToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center p-3 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-sm w-full border border-[#D4E7EC] shadow-2xl p-5 space-y-4">
+            <h4 className="text-sm font-bold text-[#202729]">Confirm Expense Deletion</h4>
+            <p className="text-xs text-[#5A6B70] leading-relaxed">
+              Are you sure you want to delete expense <strong className="text-[#202729]">"{expenseToDelete.desc}"</strong>? This will permanently remove the record and any attached receipt image.
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#D4E7EC]">
+              <button
+                type="button"
+                onClick={() => setExpenseToDelete(null)}
+                className="px-3.5 py-2 rounded-xl border border-[#D4E7EC] text-xs font-bold text-[#5A6B70] hover:bg-[#F4FAFB] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteExpense}
+                className="px-4 py-2 rounded-xl bg-[#9E3636] hover:bg-[#852C2C] text-white text-xs font-bold cursor-pointer transition active:scale-95"
+              >
+                Delete Expense
               </button>
             </div>
           </div>

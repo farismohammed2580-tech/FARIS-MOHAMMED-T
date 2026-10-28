@@ -56,8 +56,8 @@ export function formatStatementWhatsAppMessage(
   settings: BusinessSettings
 ): string {
   const bizName = settings.businessName || 'WIN WHITE LAUNDRY';
-  const phone = settings.phone || '02 440 3012';
-  const mobile = settings.mobile || '056 657 5169';
+  const mobile1 = settings.mobile || '056 657 5169';
+  const mobile2 = settings.mobile2 || '055 720 2819';
   const address = settings.address || 'Zayed Street, Tourist Club, Behind Subaru Showroom, Abu Dhabi, U.A.E.';
 
   const invoiceLines = statement.invoices
@@ -95,7 +95,7 @@ export function formatStatementWhatsAppMessage(
     `Payment Methods: Cash, Card, or Bank Transfer.\n\n` +
     `If you have already settled this balance, kindly disregard this notice.\n` +
     `For any questions or pickups:\n` +
-    `Tel: ${phone} | Mobile/WhatsApp: ${mobile}\n` +
+    `Mobile/WhatsApp: ${mobile1} | Mobile: ${mobile2}\n` +
     `${address}\n` +
     `Thank you for your valued patronage!`
   );

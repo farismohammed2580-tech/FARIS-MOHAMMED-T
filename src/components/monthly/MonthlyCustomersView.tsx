@@ -14,9 +14,11 @@ import {
   ChevronRight,
   AlertCircle,
   CheckCircle2,
-  Clock,
   Sparkles,
+  FileCheck,
 } from 'lucide-react';
+import { CustomerProofUpload } from './CustomerProofUpload';
+import { saveCustomerProof } from '../../services/customerProofStorage';
 
 interface MonthlyCustomersViewProps {
   settings: BusinessSettings;
@@ -54,6 +56,11 @@ export const MonthlyCustomersView: React.FC<MonthlyCustomersViewProps> = ({
   const [requireAdminApproval, setRequireAdminApproval] = useState(false);
   const [notes, setNotes] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Customer Proof document states
+  const [proofDataUrl, setProofDataUrl] = useState<string | null>(null);
+  const [proofFileName, setProofFileName] = useState<string | null>(null);
+  const [proofFileType, setProofFileType] = useState<string | null>(null);
 
   const loadData = () => {
     setCustomers(storage.getCustomers());
@@ -139,10 +146,18 @@ export const MonthlyCustomersView: React.FC<MonthlyCustomersViewProps> = ({
     setRequireAdminApproval(false);
     setNotes('');
     setErrorMessage(null);
+    setProofDataUrl(null);
+    setProofFileName(null);
+    setProofFileType(null);
 
     if (availableExistingCustomers.length > 0) {
       setSelectedExistingCustId(availableExistingCustomers[0].id);
       setWhatsappNumber(availableExistingCustomers[0].phone);
+      if (availableExistingCustomers[0].proofDocumentUrl) {
+        setProofDataUrl(availableExistingCustomers[0].proofDocumentUrl);
+        setProofFileName(availableExistingCustomers[0].proofDocumentName || 'Customer_Proof');
+        setProofFileType(availableExistingCustomers[0].proofDocumentType || 'image/jpeg');
+      }
       setAddMode('existing');
     } else {
       setAddMode('new');
@@ -161,6 +176,15 @@ export const MonthlyCustomersView: React.FC<MonthlyCustomersViewProps> = ({
     const found = customers.find((c) => c.id === id);
     if (found) {
       setWhatsappNumber(found.phone);
+      if (found.proofDocumentUrl) {
+        setProofDataUrl(found.proofDocumentUrl);
+        setProofFileName(found.proofDocumentName || 'Customer_Proof');
+        setProofFileType(found.proofDocumentType || 'image/jpeg');
+      } else {
+        setProofDataUrl(null);
+        setProofFileName(null);
+        setProofFileType(null);
+      }
     }
   };
 
@@ -219,10 +243,17 @@ export const MonthlyCustomersView: React.FC<MonthlyCustomersViewProps> = ({
       notes: notes.trim(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      proofDocumentUrl: proofDataUrl || undefined,
+      proofDocumentName: proofFileName || undefined,
+      proofDocumentType: proofFileType || undefined,
+      proofDocumentUploadedAt: proofDataUrl ? new Date().toISOString() : undefined,
     };
 
     try {
       storage.saveMonthlyAccount(newAccount);
+      if (proofDataUrl) {
+        saveCustomerProof(targetCustomerId, proofDataUrl, proofFileName || 'proof.jpg', proofFileType || 'image/jpeg');
+      }
       setIsAddModalOpen(false);
       loadData();
     } catch (err: any) {
@@ -350,6 +381,12 @@ export const MonthlyCustomersView: React.FC<MonthlyCustomersViewProps> = ({
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#E6F5F8] text-[#006D77] border border-[#BDE7EF]">
                         {account.customerCode}
                       </span>
+                      {(account.proofDocumentUrl || customer.proofDocumentUrl) && (
+                        <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-[#E6F8EE] text-[#147D42] border border-[#B3E8C8]" title="Customer proof document attached">
+                          <FileCheck className="w-2.5 h-2.5" />
+                          Proof
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-[11px] font-mono text-[#5A6B70] mt-0.5">
@@ -630,6 +667,20 @@ export const MonthlyCustomersView: React.FC<MonthlyCustomersViewProps> = ({
                     />
                     <span className="font-semibold text-[#202729]">Require Admin Approval Before Dispatch</span>
                   </label>
+                </div>
+
+                {/* Customer Proof / Verification Document Section */}
+                <div className="pt-2 border-t border-[#D4E7EC]">
+                  <CustomerProofUpload
+                    label="Customer Proof / Documents (Optional)"
+                    currentProofUrl={proofDataUrl}
+                    currentFileName={proofFileName}
+                    onProofChange={(url, name, type) => {
+                      setProofDataUrl(url);
+                      setProofFileName(name);
+                      setProofFileType(type);
+                    }}
+                  />
                 </div>
               </div>
 

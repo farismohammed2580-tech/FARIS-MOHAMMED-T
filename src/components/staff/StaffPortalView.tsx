@@ -243,6 +243,26 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                         Inspect <ArrowRight className="w-3 h-3" />
                       </span>
                     </div>
+
+                    {/* Packing Preference Label for Staff */}
+                    <div className="mt-2 pt-1.5 border-t border-[#D4E7EC]/60 flex items-center justify-between">
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border font-mono ${
+                          (inv.packingPreference || 'Fold') === 'Hanging'
+                            ? 'bg-[#E0F2FE] text-[#0369A1] border-[#BAE6FD]'
+                            : (inv.packingPreference || 'Fold') === 'Mixed'
+                            ? 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
+                            : 'bg-[#F4FAFB] text-[#006D77] border-[#006D77]/30'
+                        }`}
+                      >
+                        PACKING: {(inv.packingPreference || 'Fold').toUpperCase()}
+                      </span>
+                      {inv.packingPreference === 'Mixed' && (
+                        <span className="text-[9px] text-[#92400E] font-bold">
+                          Mixed Items
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -299,6 +319,21 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
               </p>
             </div>
 
+            {/* Prominent Packing Requirement Banner for Floor Staff */}
+            <div className="p-3 bg-[#FAF4E8] border-2 border-[#D97706] rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+              <div>
+                <span className="block text-[10px] font-bold text-[#92400E] uppercase tracking-wider">
+                  Packing Requirement
+                </span>
+                <span className="font-mono font-black text-sm text-[#92400E] uppercase tracking-wider">
+                  PACKING: {(selectedInvoice.packingPreference || 'Fold').toUpperCase()}
+                </span>
+              </div>
+              <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-[#92400E] text-white uppercase tracking-wider font-mono">
+                {(selectedInvoice.packingPreference || 'Fold').toUpperCase()}
+              </span>
+            </div>
+
             {/* Special Garment Instructions if any */}
             {selectedInvoice.notes && (
               <div className="p-2.5 bg-[#FAF4E8] border border-[#EEDCB7] rounded-xl text-xs text-[#96681A]">
@@ -324,6 +359,15 @@ export const StaffPortalView: React.FC<StaffPortalViewProps> = ({
                         </span>
                         <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#E6F5F8] text-[#006D77] border border-[#006D77]/20">
                           {item.service}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-black font-mono uppercase border ${
+                            (item.packingPreference || (selectedInvoice.packingPreference === 'Hanging' ? 'Hanging' : 'Fold')) === 'Hanging'
+                              ? 'bg-[#E0F2FE] text-[#0369A1] border-[#BAE6FD]'
+                              : 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
+                          }`}
+                        >
+                          {(item.packingPreference || (selectedInvoice.packingPreference === 'Hanging' ? 'Hanging' : 'Fold')).toUpperCase()}
                         </span>
                       </div>
                       {item.specialInstructions && (

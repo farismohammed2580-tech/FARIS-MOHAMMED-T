@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Invoice, OrderStatus, UserAccount, BusinessSettings } from '../../types';
+import {
+  Invoice,
+  InvoiceItem,
+  OrderStatus,
+  UserAccount,
+  BusinessSettings,
+  PackingPreference,
+  ItemPackingPreference,
+} from '../../types';
 import { storage } from '../../services/storage';
 import {
   Search,
@@ -12,17 +20,20 @@ import {
   Calendar,
   Layers,
   Phone,
+  Package,
 } from 'lucide-react';
 import { PrintInvoiceModal } from '../invoice/PrintInvoiceModal';
 
 interface OrderTrackingViewProps {
   currentUser: UserAccount;
   settings: BusinessSettings;
+  onEditInvoice?: (invoice: Invoice) => void;
 }
 
 export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
   currentUser,
   settings,
+  onEditInvoice,
 }) => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState('');
@@ -35,6 +46,8 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
   // Status Change Dialog
   const [statusChangeInvoice, setStatusChangeInvoice] = useState<Invoice | null>(null);
   const [newSelectedStatus, setNewSelectedStatus] = useState<OrderStatus>('In Progress');
+  const [newSelectedPacking, setNewSelectedPacking] = useState<PackingPreference>('Fold');
+  const [statusItems, setStatusItems] = useState<InvoiceItem[]>([]);
   const [statusNote, setStatusNote] = useState('');
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
@@ -74,23 +87,48 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
   const handleOpenStatusModal = (inv: Invoice) => {
     setStatusChangeInvoice(inv);
     setNewSelectedStatus(inv.status);
+    setNewSelectedPacking(inv.packingPreference || 'Fold');
+    setStatusItems(inv.items.map((it) => ({ ...it })));
     setStatusNote('');
+  };
+
+  const handleToggleItemPacking = (idx: number, pref: ItemPackingPreference) => {
+    setStatusItems((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], packingPreference: pref };
+      return copy;
+    });
   };
 
   const handleConfirmStatusChange = (e: React.FormEvent) => {
     e.preventDefault();
     if (!statusChangeInvoice) return;
 
+    const itemsToSave: InvoiceItem[] = statusItems.map((it) => ({
+      ...it,
+      packingPreference:
+        newSelectedPacking === 'Mixed'
+          ? (it.packingPreference || 'Fold')
+          : (newSelectedPacking === 'Hanging' ? 'Hanging' : 'Fold'),
+    }));
+
+    const statusNoteText = statusNote.trim()
+      ? `${statusNote.trim()} [Packing: ${newSelectedPacking.toUpperCase()}]`
+      : `Packing: ${newSelectedPacking.toUpperCase()}`;
+
     const updated = storage.updateOrderStatus(
       statusChangeInvoice.id,
       newSelectedStatus,
       `${currentUser.name} (${currentUser.role})`,
-      statusNote.trim() || undefined
+      statusNoteText
     );
 
     if (updated) {
+      updated.packingPreference = newSelectedPacking;
+      updated.items = itemsToSave;
+      storage.saveInvoice(updated);
       showToast(
-        `Invoice ${updated.invoiceNumber} status updated to "${newSelectedStatus}" by ${currentUser.name}`
+        `Invoice ${updated.invoiceNumber} updated (${newSelectedStatus}, Packing: ${newSelectedPacking})`
       );
     }
 
@@ -192,13 +230,26 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
                   </span>
                 </div>
 
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(
-                    inv.status
-                  )}`}
-                >
-                  {inv.status}
-                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider font-mono border ${
+                      (inv.packingPreference || 'Fold') === 'Hanging'
+                        ? 'bg-[#E0F2FE] text-[#0369A1] border-[#BAE6FD]'
+                        : (inv.packingPreference || 'Fold') === 'Mixed'
+                        ? 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
+                        : 'bg-[#F4FAFB] text-[#006D77] border-[#006D77]/30'
+                    }`}
+                  >
+                    PACKING: {(inv.packingPreference || 'Fold').toUpperCase()}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(
+                      inv.status
+                    )}`}
+                  >
+                    {inv.status}
+                  </span>
+                </div>
               </div>
 
               <div>
@@ -220,26 +271,43 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
                   </span>
                 </div>
                 <p className="text-[10px] text-[#5A6B70] truncate">
-                  {inv.items.map((it) => `${it.dressTypeName} (${it.service}) x${it.quantity}`).join(', ')}
+                  {inv.items
+                    .map((it) => {
+                      const tag =
+                        inv.packingPreference === 'Mixed'
+                          ? ` [${(it.packingPreference || 'Fold').toUpperCase()}]`
+                          : '';
+                      return `${it.dressTypeName}${tag} (${it.service}) x${it.quantity}`;
+                    })
+                    .join(', ')}
                 </p>
               </div>
 
               {/* Action Buttons for Mobile Card */}
-              <div className="grid grid-cols-3 gap-2 pt-0.5">
+              <div className="grid grid-cols-4 gap-1.5 pt-0.5">
                 <button
                   type="button"
                   onClick={() => handleOpenStatusModal(inv)}
                   className="py-2 px-1 text-xs font-bold text-white bg-[#006D77] hover:bg-[#00575F] rounded-xl text-center shadow-xs cursor-pointer"
                 >
-                  Update
+                  Status
                 </button>
+                {onEditInvoice ? (
+                  <button
+                    type="button"
+                    onClick={() => onEditInvoice(inv)}
+                    className="py-2 px-1 text-xs font-bold text-[#006D77] bg-[#E6F8EE] hover:bg-[#D1F3DE] border border-[#B3E8C8] rounded-xl flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <span>Edit</span>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setActiveInvoiceId(inv.id)}
                   className="py-2 px-1 text-xs font-bold text-[#202729] bg-[#F4FAFB] hover:bg-[#E6F5F8] border border-[#D4E7EC] rounded-xl flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <History className="w-3.5 h-3.5 text-[#5A6B70]" />
-                  <span>History</span>
+                  <span>Audit</span>
                 </button>
                 <button
                   type="button"
@@ -309,6 +377,78 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
                 </div>
               </div>
 
+              {/* Packing Preference Selection */}
+              <div>
+                <label className="block font-bold text-[#202729] mb-1">
+                  Packing Preference:
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['Fold', 'Hanging', 'Mixed'] as PackingPreference[]).map((pref) => (
+                    <button
+                      key={pref}
+                      type="button"
+                      onClick={() => {
+                        setNewSelectedPacking(pref);
+                        if (pref === 'Fold' || pref === 'Hanging') {
+                          setStatusItems((prev) =>
+                            prev.map((it) => ({ ...it, packingPreference: pref }))
+                          );
+                        }
+                      }}
+                      className={`p-2 rounded-xl text-xs font-bold border transition text-center cursor-pointer ${
+                        newSelectedPacking === pref
+                          ? 'bg-[#006D77] text-white border-[#006D77] shadow-xs'
+                          : 'bg-[#F4FAFB] text-[#202729] border-[#D4E7EC] hover:bg-[#E6F5F8]'
+                      }`}
+                    >
+                      {pref}
+                    </button>
+                  ))}
+                </div>
+
+                {newSelectedPacking === 'Mixed' && (
+                  <div className="mt-2 space-y-1.5 max-h-36 overflow-y-auto p-2 bg-[#F8FCFD] border border-[#D4E7EC] rounded-xl">
+                    <span className="block text-[10px] font-bold text-[#92400E] uppercase">
+                      Mixed Order Item Instructions:
+                    </span>
+                    {statusItems.map((it, idx) => (
+                      <div
+                        key={it.id || idx}
+                        className="flex items-center justify-between text-[11px] bg-white p-1.5 rounded-lg border border-[#D4E7EC]"
+                      >
+                        <span className="font-medium text-[#202729] truncate pr-2">
+                          {it.dressTypeName} x{it.quantity}
+                        </span>
+                        <div className="inline-flex gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleItemPacking(idx, 'Fold')}
+                            className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                              (it.packingPreference || 'Fold') === 'Fold'
+                                ? 'bg-[#006D77] text-white'
+                                : 'bg-[#F4FAFB] text-[#5A6B70] border border-[#D4E7EC]'
+                            }`}
+                          >
+                            Fold
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleItemPacking(idx, 'Hanging')}
+                            className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                              it.packingPreference === 'Hanging'
+                                ? 'bg-[#006D77] text-white'
+                                : 'bg-[#F4FAFB] text-[#5A6B70] border border-[#D4E7EC]'
+                            }`}
+                          >
+                            Hanging
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block font-bold text-[#202729] mb-1">
                   Floor Note (Optional):
@@ -326,15 +466,15 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setStatusChangeInvoice(null)}
-                  className="px-3 py-1.5 text-xs font-semibold text-[#202729] bg-[#F4FAFB] border border-[#D4E7EC] rounded-xl"
+                  className="px-3 py-1.5 text-xs font-semibold text-[#202729] bg-[#F4FAFB] border border-[#D4E7EC] rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs font-bold text-white bg-[#006D77] hover:bg-[#00575F] rounded-xl shadow-xs"
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-[#006D77] hover:bg-[#00575F] rounded-xl shadow-xs cursor-pointer"
                 >
-                  Save Status
+                  Save Changes
                 </button>
               </div>
             </form>
@@ -356,10 +496,18 @@ export const OrderTrackingView: React.FC<OrderTrackingViewProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveInvoiceId(null)}
-                className="text-[#5A6B70] hover:text-[#202729] p-1"
+                className="text-[#5A6B70] hover:text-[#202729] p-1 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+
+            {/* Prominent Packing Banner in Audit Modal */}
+            <div className="p-2.5 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl flex items-center justify-between text-xs">
+              <span className="font-bold text-[#92400E]">Packing Requirement:</span>
+              <span className="font-mono font-black text-xs text-[#92400E] bg-[#FEF3C7] px-2 py-0.5 rounded border border-[#FDE68A]">
+                {(activeInvoice.packingPreference || 'Fold').toUpperCase()}
+              </span>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2 pr-1 text-xs">

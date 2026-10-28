@@ -35,31 +35,43 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
       year: 'numeric',
     });
 
+    const packingText = (invoice.packingPreference || 'Fold').toUpperCase();
     const itemsSummary = invoice.items
-      .map((it) => `• ${it.dressTypeName} (${it.service}) x${it.quantity}: ${formatAED(it.subtotal)}`)
+      .map((it) => {
+        const itemPack = invoice.packingPreference === 'Mixed' ? ` [${(it.packingPreference || 'Fold').toUpperCase()}]` : '';
+        return `• ${it.dressTypeName}${itemPack} (${it.service}) x${it.quantity}: ${formatAED(it.subtotal)}`;
+      })
       .join('\n');
 
     const msg = `*WIN WHITE LAUNDRY - ABU DHABI*\n*Cash Invoice #${invoice.invoiceNumber}*\n\n` +
       `Dear ${invoice.customerName},\n` +
       `Thank you for trusting WIN WHITE LAUNDRY (Tourist Club, Abu Dhabi).\n\n` +
       `*Order Summary:*\n${itemsSummary}\n\n` +
+      `*Packing Instruction:* ${packingText}\n` +
       `*Total Amount:* ${formatAED(invoice.total)}\n` +
       `*Paid:* ${formatAED(invoice.amountPaid)}\n` +
       `*Remaining Balance:* ${formatAED(invoice.remainingBalance)}\n` +
       `*Receiving Date:* ${dateFormatted}\n` +
       `*Delivery Date:* ${invoice.expectedDeliveryDate}\n` +
       `*Status:* ${invoice.status}\n\n` +
-      `Tel: ${settings.phone || '02 440 3012'} | Mob: ${settings.mobile || '056 657 5169'}\n` +
+      `_${settings.garmentResponsibilityNotice || 'IMPORTANT NOTICE: Win White Laundry accepts responsibility for garments for a maximum period of 30 days from the agreed collection date, subject to applicable law.'}_\n\n` +
+      `Mob: ${settings.mobile || '056 657 5169'} / ${settings.mobile2 || '055 720 2819'}\n` +
       `Zayed Street, Tourist Club, Behind Subaru Showroom, Abu Dhabi, U.A.E.\n` +
       `Email: ${settings.email || 'winwhite1222@gmail.com'}`;
 
     const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   // Native Web Share or Clipboard Fallback
   const handleNativeShare = async () => {
-    const shareText = `WIN WHITE LAUNDRY Cash Invoice #${invoice.invoiceNumber} for ${invoice.customerName}. Total: ${formatAED(invoice.total)}, Balance: ${formatAED(invoice.remainingBalance)}. Ready Date: ${invoice.expectedDeliveryDate}. Tel: 02 440 3012.`;
+    const shareText = `WIN WHITE LAUNDRY Cash Invoice #${invoice.invoiceNumber} for ${invoice.customerName}. Total: ${formatAED(invoice.total)}, Balance: ${formatAED(invoice.remainingBalance)}. Ready Date: ${invoice.expectedDeliveryDate}. Mob: ${settings.mobile || '056 657 5169'} / ${settings.mobile2 || '055 720 2819'}.`;
 
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
@@ -141,10 +153,10 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
             </p>
             <div className="text-[9.5px] text-[#4A5557] space-y-0.5 pt-0.5 leading-snug">
               <p>
-                <span className="font-semibold text-[#202729]">Tel. :</span> {settings.phone || '02 440 3012'}
+                <span className="font-semibold text-[#202729]">Mob.:</span> {settings.mobile || '056 657 5169'}
               </p>
               <p>
-                <span className="font-semibold text-[#202729]">Mob.:</span> {settings.mobile || '056 657 5169'}
+                <span className="font-semibold text-[#202729]">Mob.:</span> {settings.mobile2 || '055 720 2819'}
               </p>
               <p>
                 <span className="font-semibold text-[#202729]">P.O. Box:</span> {settings.poBox || '4575'}
@@ -217,6 +229,25 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
           </div>
         </div>
 
+        {/* Prominent Packing Instruction Banner */}
+        <div className="bg-[#FFFBEB] border-2 border-[#D97706] rounded-xl p-2.5 mb-3 flex items-center justify-between gap-2 print:border-2 print:border-[#D97706]">
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-black text-xs sm:text-sm text-[#92400E] uppercase tracking-wider">
+              PACKING INSTRUCTION:
+            </span>
+            <span className="font-mono font-black text-xs sm:text-sm bg-[#92400E] text-white px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+              {(invoice.packingPreference || 'Fold').toUpperCase()}
+            </span>
+          </div>
+          <span className="text-[10px] sm:text-xs font-bold text-[#92400E] uppercase">
+            {invoice.packingPreference === 'Mixed'
+              ? 'Mixed Order — See Item Details Below'
+              : invoice.packingPreference === 'Hanging'
+              ? 'All Items on Hangers'
+              : 'All Items Folded'}
+          </span>
+        </div>
+
         {/* Itemized Garments Table (ENGLISH ONLY) */}
         <div className="border border-[#DDE8EA] rounded-xl overflow-hidden mb-3">
           <table className="w-full text-left border-collapse text-[10.5px]">
@@ -237,7 +268,20 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                     {idx + 1}
                   </td>
                   <td className="py-2 px-2.5 font-bold text-[#202729] uppercase">
-                    {item.dressTypeName}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span>{item.dressTypeName}</span>
+                      {invoice.packingPreference === 'Mixed' && (
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[8.5px] font-mono font-black border uppercase ${
+                            (item.packingPreference || 'Fold') === 'Hanging'
+                              ? 'bg-[#E0F2FE] text-[#0369A1] border-[#BAE6FD]'
+                              : 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
+                          }`}
+                        >
+                          [{(item.packingPreference || 'Fold').toUpperCase()}]
+                        </span>
+                      )}
+                    </div>
                     {item.specialInstructions && (
                       <span className="block text-[9px] text-[#B91C1C] font-normal normal-case">
                         Note: {item.specialInstructions}
@@ -370,6 +414,14 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
             </div>
           </div>
 
+          {/* Statutory Garment Responsibility Notice (30-Day Limit Notice) */}
+          <div className="mt-2.5 p-2 bg-[#F4FAFB] border border-[#006D77]/40 rounded-xl text-[9px] sm:text-[9.5px] text-[#202729] leading-snug">
+            <p className="font-bold text-[#006D77]">
+              {settings.garmentResponsibilityNotice ||
+                'IMPORTANT NOTICE: Win White Laundry accepts responsibility for garments for a maximum period of 30 days from the agreed collection date, subject to applicable law.'}
+            </p>
+          </div>
+
           {/* Footer Thank You & Signature Line */}
           <div className="flex justify-between items-end mt-3 pt-1 text-[10px] text-[#5A6B70]">
             <div>
@@ -377,7 +429,7 @@ export const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({
                 {settings.thankYouMessage || 'Thank you for visiting WIN WHITE LAUNDRY!'}
               </p>
               <p className="text-[9px] text-[#5A6B70] mt-0.5">
-                WIN WHITE LAUNDRY • Abu Dhabi, U.A.E. • Tel: {settings.phone || '02 440 3012'}
+                WIN WHITE LAUNDRY • Abu Dhabi, U.A.E. • Mob: {settings.mobile || '056 657 5169'} / {settings.mobile2 || '055 720 2819'}
               </p>
             </div>
             <div className="text-right">

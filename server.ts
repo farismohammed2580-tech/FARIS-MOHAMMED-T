@@ -80,7 +80,7 @@ app.post('/api/whatsapp/send-statement', async (req: Request, res: Response) => 
       `--------------------------------\n` +
       `*TOTAL AMOUNT DUE: AED ${(Number(totalAmountDue) || 0).toFixed(2)}*\n\n` +
       `Thank you for choosing WIN WHITE LAUNDRY.\n` +
-      `Tel: 02 440 3012 | Mobile: 056 657 5169\n` +
+      `Mobile: 056 657 5169 | Mobile: 055 720 2819\n` +
       `Zayed Street, Tourist Club, Abu Dhabi, U.A.E.`;
 
   // If WhatsApp credentials are not configured on server

@@ -36,6 +36,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [logoError, setLogoError] = useState<string | null>(null);
   const [logoSuccess, setLogoSuccess] = useState<string | null>(null);
   const [isProcessingLogo, setIsProcessingLogo] = useState<boolean>(false);
+  const [showRemoveLogoConfirm, setShowRemoveLogoConfirm] = useState<boolean>(false);
+  const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -106,24 +108,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // Remove existing or pending logo
   const handleRemoveLogo = () => {
-    if (
-      confirm(
-        'Are you sure you want to remove the business logo? The default WIN WHITE LAUNDRY text mark will be restored across all screens.'
-      )
-    ) {
-      try {
-        const updated = storage.saveSettings({
-          ...formData,
-          logoUrl: '',
-        });
-        setFormData(updated);
-        setPendingLogoUrl(null);
-        setLogoError(null);
-        onSettingsUpdated(updated);
-        showLogoSuccessMsg('Business logo removed. Default WIN WHITE LAUNDRY brand mark restored.');
-      } catch (err: any) {
-        setLogoError(err?.message || 'Failed to remove business logo.');
-      }
+    setShowRemoveLogoConfirm(true);
+  };
+
+  const executeRemoveLogo = () => {
+    try {
+      const updated = storage.saveSettings({
+        ...formData,
+        logoUrl: '',
+      });
+      setFormData(updated);
+      setPendingLogoUrl(null);
+      setLogoError(null);
+      setShowRemoveLogoConfirm(false);
+      onSettingsUpdated(updated);
+      showLogoSuccessMsg('Business logo removed. Default WIN WHITE LAUNDRY brand mark restored.');
+    } catch (err: any) {
+      setLogoError(err?.message || 'Failed to remove business logo.');
+      setShowRemoveLogoConfirm(false);
     }
   };
 
@@ -141,18 +143,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleResetData = () => {
-    if (
-      confirm(
-        'Are you sure you want to restore the initial Dubai prototype demonstration dataset? Any newly created invoices or expenses will be restored to initial sample data.'
-      )
-    ) {
-      storage.resetToDefaultSeed();
-      const s = storage.getSettings();
-      setFormData(s);
-      setPendingLogoUrl(null);
-      onSettingsUpdated(s);
-      showToast('Prototype data reset to initial Dubai demo state.');
-    }
+    setShowResetConfirm(true);
+  };
+
+  const executeResetData = () => {
+    storage.resetToDefaultSeed();
+    const s = storage.getSettings();
+    setFormData(s);
+    setPendingLogoUrl(null);
+    setShowResetConfirm(false);
+    onSettingsUpdated(s);
+    showToast('Prototype data reset to initial Dubai demo state.');
   };
 
   return (
@@ -422,25 +423,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs font-bold text-[#202729] mb-1">
-                  Landline Phone
-                </label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleChange('phone', e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs font-mono bg-[#F4FAFB] border border-[#D4E7EC] rounded-xl text-[#202729]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#202729] mb-1">
-                  WhatsApp Hotline
+                  Business Mobile 1
                 </label>
                 <input
                   type="tel"
                   value={formData.mobile}
                   onChange={(e) => handleChange('mobile', e.target.value)}
                   className="w-full px-2.5 py-2 text-xs font-mono bg-[#F4FAFB] border border-[#D4E7EC] rounded-xl text-[#202729]"
+                  placeholder="056 657 5169"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#202729] mb-1">
+                  Business Mobile 2
+                </label>
+                <input
+                  type="tel"
+                  value={formData.mobile2 || ''}
+                  onChange={(e) => handleChange('mobile2', e.target.value)}
+                  className="w-full px-2.5 py-2 text-xs font-mono bg-[#F4FAFB] border border-[#D4E7EC] rounded-xl text-[#202729]"
+                  placeholder="055 720 2819"
                 />
               </div>
             </div>
@@ -525,6 +528,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 onChange={(e) => handleChange('customerNotice', e.target.value)}
                 className="w-full p-2.5 text-xs bg-[#F4FAFB] border border-[#D4E7EC] rounded-xl text-[#202729]"
               />
+            </div>
+
+            {/* Garment Responsibility Notice (30-Day Limit Notice) */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-[#202729]">
+                  Garment Responsibility Notice (30-Day Collection Limit)
+                </label>
+                <span className="text-[10px] text-[#006D77] font-bold">Printed on All Invoices</span>
+              </div>
+              <textarea
+                rows={2}
+                value={formData.garmentResponsibilityNotice || ''}
+                onChange={(e) => handleChange('garmentResponsibilityNotice', e.target.value)}
+                placeholder="IMPORTANT NOTICE: Win White Laundry accepts responsibility for garments for a maximum period of 30 days from the agreed collection date, subject to applicable law."
+                className="w-full p-2.5 text-xs bg-[#F4FAFB] border border-[#D4E7EC] rounded-xl text-[#202729] font-medium"
+              />
+              <p className="text-[10px] text-[#5A6B70] mt-0.5 leading-snug">
+                Transparent consumer notice printed at the bottom of all customer receipts regarding maximum 30-day garment storage responsibility, subject to applicable UAE consumer protection laws.
+              </p>
             </div>
 
             <div>
@@ -621,6 +644,62 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Remove Logo Confirmation Modal */}
+      {showRemoveLogoConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center p-3 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-sm w-full border border-[#D4E7EC] shadow-2xl p-5 space-y-4">
+            <h4 className="text-sm font-bold text-[#202729]">Remove Business Logo</h4>
+            <p className="text-xs text-[#5A6B70] leading-relaxed">
+              Are you sure you want to remove the business logo? The default WIN WHITE LAUNDRY text mark will be restored across all screens and printed receipts.
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#D4E7EC]">
+              <button
+                type="button"
+                onClick={() => setShowRemoveLogoConfirm(false)}
+                className="px-3.5 py-2 rounded-xl border border-[#D4E7EC] text-xs font-bold text-[#5A6B70] hover:bg-[#F4FAFB] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeRemoveLogo}
+                className="px-4 py-2 rounded-xl bg-[#9E3636] hover:bg-[#852C2C] text-white text-xs font-bold cursor-pointer transition active:scale-95"
+              >
+                Remove Logo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Demo Data Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center p-3 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-sm w-full border border-[#D4E7EC] shadow-2xl p-5 space-y-4">
+            <h4 className="text-sm font-bold text-[#9E3636]">Reset Demonstration Data</h4>
+            <p className="text-xs text-[#5A6B70] leading-relaxed">
+              Are you sure you want to restore the initial Dubai prototype demonstration dataset? Any newly created invoices or expenses will be restored to initial sample data.
+            </p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#D4E7EC]">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                className="px-3.5 py-2 rounded-xl border border-[#D4E7EC] text-xs font-bold text-[#5A6B70] hover:bg-[#F4FAFB] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeResetData}
+                className="px-4 py-2 rounded-xl bg-[#9E3636] hover:bg-[#852C2C] text-white text-xs font-bold cursor-pointer transition active:scale-95"
+              >
+                Reset Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

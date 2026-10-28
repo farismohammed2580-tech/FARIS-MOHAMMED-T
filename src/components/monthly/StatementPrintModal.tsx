@@ -83,7 +83,7 @@ export const StatementPrintModal: React.FC<StatementPrintModalProps> = ({
                   {settings.address || 'Zayed Street, Tourist Club, Behind Subaru Showroom, Abu Dhabi, U.A.E.'}
                 </p>
                 <p className="text-[11px] font-mono text-[#006D77] mt-0.5 font-bold">
-                  Tel: {settings.phone || '02 440 3012'} | Mob: {settings.mobile || '056 657 5169'}
+                  Mob: {settings.mobile || '056 657 5169'} | Mob: {settings.mobile2 || '055 720 2819'}
                 </p>
               </div>
             </div>

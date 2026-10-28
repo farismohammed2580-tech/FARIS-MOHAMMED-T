@@ -113,18 +113,57 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
     );
   }
 
+  const [showFallbackGuide, setShowFallbackGuide] = useState(false);
+
   // Generic fallback install prompt on supported browsers
   return (
-    <button
-      type="button"
-      onClick={() => {
-        alert('To install WIN WHITE LAUNDRY, use your browser menu (⋮ or Share) and select "Add to Home Screen" or "Install App".');
-      }}
-      className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#E6F7FD] hover:bg-[#d6f0fb] text-[#006D77] border border-[#70D0F5]/50 text-xs font-bold transition cursor-pointer ${className}`}
-      title="Install App"
-    >
-      <Download className="w-3.5 h-3.5 shrink-0" />
-      <span>Install App</span>
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setShowFallbackGuide(true)}
+        className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#E6F7FD] hover:bg-[#d6f0fb] text-[#006D77] border border-[#70D0F5]/50 text-xs font-bold transition cursor-pointer ${className}`}
+        title="Install App"
+      >
+        <Download className="w-3.5 h-3.5 shrink-0" />
+        <span>Install App</span>
+      </button>
+
+      {showFallbackGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-[#DDE8EA] space-y-4 text-[#202729]">
+            <div className="flex items-center justify-between border-b border-[#DDE8EA] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#006D77] text-white flex items-center justify-center font-black text-xs">
+                  WW
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#006D77]">Install App</h3>
+                  <p className="text-[10px] text-[#5A696D]">Add WIN WHITE LAUNDRY to your Home Screen</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFallbackGuide(false)}
+                className="p-1 text-[#5A696D] hover:text-[#202729] rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-xs text-[#202729] leading-relaxed p-3 bg-[#F4FAFB] rounded-xl border border-[#DDE8EA]">
+              To install WIN WHITE LAUNDRY, open your browser menu (⋮ in Chrome/Edge, or Share in Safari) and select <strong>"Add to Home Screen"</strong> or <strong>"Install App"</strong>.
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowFallbackGuide(false)}
+              className="w-full py-2.5 rounded-xl bg-[#006D77] hover:bg-[#00565E] text-white text-xs font-bold transition cursor-pointer"
+            >
+              Got It
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

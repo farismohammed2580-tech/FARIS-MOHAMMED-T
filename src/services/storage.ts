@@ -652,8 +652,9 @@ const INITIAL_SETTINGS: BusinessSettings = {
   tagline: 'Laundry Shop',
   branch: 'Tourist Club, Abu Dhabi',
   address: 'Zayed Street, Tourist Club, Behind Subaru Showroom, Abu Dhabi, U.A.E.',
-  phone: '02 440 3012',
+  phone: '', // Telephone 02 440 3012 removed
   mobile: '056 657 5169',
+  mobile2: '055 720 2819',
   poBox: '4575',
   email: 'winwhite1222@gmail.com',
   trnNumber: '100482910400003',
@@ -677,6 +678,8 @@ const INITIAL_SETTINGS: BusinessSettings = {
   adminPin: '1234',
   staffPin: '4321',
   logoUrl: '',
+  garmentResponsibilityNotice:
+    'IMPORTANT NOTICE: Win White Laundry accepts responsibility for garments for a maximum period of 30 days from the agreed collection date, subject to applicable law.',
 };
 
 // Initial Staff Accounts - Consolidated to single shared Staff Portal (PIN 4321)
@@ -1496,6 +1499,12 @@ class StorageService {
       cust.isMonthlyCustomer = account.accountStatus !== 'Inactive';
       cust.customerCode = account.customerCode;
       cust.monthlyAccountId = account.id;
+      if (account.proofDocumentUrl !== undefined) {
+        cust.proofDocumentUrl = account.proofDocumentUrl;
+        cust.proofDocumentName = account.proofDocumentName;
+        cust.proofDocumentType = account.proofDocumentType;
+        cust.proofDocumentUploadedAt = account.proofDocumentUploadedAt;
+      }
       localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
     }
 
@@ -1875,9 +1884,17 @@ class StorageService {
       const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
       if (data) {
         const parsed = JSON.parse(data);
+        const scrubbedPhone = parsed.phone === '02 440 3012' ? '' : (parsed.phone || '');
+        const mobile1 = parsed.mobile || INITIAL_SETTINGS.mobile;
+        const mobile2 = parsed.mobile2 || (parsed.phone === '055 720 2819' ? parsed.phone : INITIAL_SETTINGS.mobile2);
         return {
           ...INITIAL_SETTINGS,
           ...parsed,
+          phone: scrubbedPhone,
+          mobile: mobile1,
+          mobile2: mobile2,
+          garmentResponsibilityNotice:
+            parsed.garmentResponsibilityNotice || INITIAL_SETTINGS.garmentResponsibilityNotice,
         };
       }
       return INITIAL_SETTINGS;
